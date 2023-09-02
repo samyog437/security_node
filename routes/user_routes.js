@@ -2,7 +2,6 @@ const express = require('express')
 const upload = require('../middleware/upload');
 const user_controller = require('../controllers/user_controller')
 const delivery_controller = require('../controllers/delivery_controller')
-const khalti = require('./khalti')
 const { verifyUser, verifyAdmin } = require('../middleware/auth')
 
 const router = express.Router()
@@ -20,10 +19,5 @@ router.route('/:user_id')
 
 router.route('/:user_id/update-password')
     .put(verifyUser, user_controller.updatePassword)
-
-
-router.route('/khalti')
-    .post(khalti.khalti)
-
 
 module.exports = router

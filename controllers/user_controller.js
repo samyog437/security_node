@@ -5,18 +5,18 @@ const jwt = require('jsonwebtoken')
 const MAX_FAILED_LOGIN_ATTEMPTS = 5; 
 const LOCK_DURATION = 5 * 60 * 1000; // 5 minutes
 
-function validatePassword(password, username) {
-  // At least 8 characters, at least one uppercase letter, at least one lowercase letter, at least one special character
+function validatePassword(password, username, email, fullname) {
   const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]).{8,}$/;
 
-  // Common passwords and personal information checks
-  const commonPasswords = ["123456", "password", "qwerty"]; // Add more common passwords if needed
+  const commonPasswords = ["123456", "password", "qwerty", "1234567890"]; 
   if (commonPasswords.includes(password.toLowerCase())) {
       return false;
   }
 
-  // Check if password contains user's name or phone number (username)
-  if (username && password.toLowerCase().includes(username.toLowerCase())) {
+  if (username && password.toLowerCase().includes(username.toLowerCase()) ||
+    email && password.toLowerCase().includes(email.toLowerCase()) ||
+    fullname && password.toLowerCase().includes(fullname.toLowerCase())
+   ) {
       return false;
   }
 
@@ -34,7 +34,7 @@ const registerUser = (req, res, next) => {
             }
 
             const password = req.body.password;
-            if (!validatePassword(password)) {
+            if (!validatePassword(password, req.body.username, req.body.email, req.body.fullname)) {
                 let err = new Error(`Password must be at least 8 characters long and include uppercase, lowercase, and special characters`);
                 res.status(400);
                 return next(err);
@@ -49,7 +49,6 @@ const registerUser = (req, res, next) => {
                 user.password = hash
                 if(req.body.role) user.role = req.body.role
                 if (req.file) {
-                    // Modify the image path to remove the "uploads" directory
                     user.image = req.file.path.replace("uploads\\", "");
                   }
                 user.save().then(user => {
@@ -71,7 +70,7 @@ const loginUser = (req, res, next) => {
     User.findOne({username: req.body.username})
         .then(user => {
             if(user == null) {
-                let err = new Error(`User ${req.body.username} has not been registered`)
+                let err = new Error(`Username or Password does not match`)
                 res.status(404)
                 return next(err)
             }
@@ -98,7 +97,7 @@ const loginUser = (req, res, next) => {
                     user.lastFailedLogin = new Date();
                     user.save();
 
-                    let err = new Error('Password does not match')
+                    let err = new Error('Username or Password does not match')
                     res.status(401)
                     return next(err)
                 }
@@ -115,7 +114,7 @@ const loginUser = (req, res, next) => {
                     role: user.role,
                 }
                 jwt.sign(data, process.env.SECRET,
-                    {'expiresIn': '30d'}, (err, token) => {
+                    {'expiresIn': '1d'}, (err, token) => {
                         if(err) return next(err)
                         res.json({
                             userId: user._id,
